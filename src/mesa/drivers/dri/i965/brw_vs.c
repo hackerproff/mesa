@@ -153,6 +153,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
       brw_vs_outputs_written(brw, key,
                              vp->program.Base.nir->info.outputs_written);
    prog_data.inputs_read = vp->program.Base.nir->info.inputs_read;
+   prog_data.double_inputs_read = vp->program.Base.nir->info.double_inputs_read;
 
    if (key->copy_edgeflag) {
       prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
