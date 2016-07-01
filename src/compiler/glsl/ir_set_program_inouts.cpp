@@ -117,10 +117,14 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          else
             prog->InputsRead |= bitfield;
 
-         /* double inputs read is only for vertex inputs */
-         if (stage == MESA_SHADER_VERTEX &&
-             var->type->without_array()->is_dual_slot())
-            prog->DualSlotInputsRead |= bitfield;
+         /* double and dual slot inputs read are only for vertex inputs */
+         if (stage == MESA_SHADER_VERTEX) {
+            if (var->type->without_array()->is_double())
+               prog->DoubleInputsRead |= bitfield;
+
+            if (var->type->without_array()->is_dual_slot())
+               prog->DualSlotInputsRead |= bitfield;
+         }
 
          if (stage == MESA_SHADER_FRAGMENT) {
             gl_fragment_program *fprog = (gl_fragment_program *) prog;
