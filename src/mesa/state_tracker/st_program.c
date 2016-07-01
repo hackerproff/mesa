@@ -253,7 +253,7 @@ st_translate_vertex_program(struct st_context *st,
          input_to_index[attr] = stvp->num_inputs;
          stvp->index_to_input[stvp->num_inputs] = attr;
          stvp->num_inputs++;
-         if ((stvp->Base.Base.DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {
+         if ((stvp->Base.Base.DualSlotInputsRead & BITFIELD64_BIT(attr)) != 0) {
             /* add placeholder for second part of a double attribute */
             stvp->index_to_input[stvp->num_inputs] = ST_DOUBLE_ATTRIB_PLACEHOLDER;
             stvp->num_inputs++;

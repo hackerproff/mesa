@@ -6581,7 +6581,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    shrink_array_declarations(v->input_arrays, v->num_input_arrays,
-                             prog->InputsRead, prog->DoubleInputsRead, prog->PatchInputsRead);
+                             prog->InputsRead, prog->DualSlotInputsRead, prog->PatchInputsRead);
    shrink_array_declarations(v->output_arrays, v->num_output_arrays,
                              prog->OutputsWritten, 0ULL, prog->PatchOutputsWritten);
    count_resources(v, prog);

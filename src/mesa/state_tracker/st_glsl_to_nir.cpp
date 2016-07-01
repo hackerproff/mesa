@@ -84,7 +84,7 @@ st_nir_assign_vs_in_locations(struct gl_program *prog,
       if ((prog->InputsRead & BITFIELD64_BIT(attr)) != 0) {
          input_to_index[attr] = num_inputs;
          num_inputs++;
-         if ((prog->DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {
+         if ((prog->DualSlotInputsRead & BITFIELD64_BIT(attr)) != 0) {
             /* add placeholder for second part of a double attribute */
             num_inputs++;
          }

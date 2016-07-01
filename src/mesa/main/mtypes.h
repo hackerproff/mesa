@@ -1907,7 +1907,7 @@ struct gl_program
    struct nir_shader *nir;
 
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
-   GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */
+   GLbitfield64 DualSlotInputsRead;     /**< Bitmask of which input regs are read and require 2 slots */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
    GLbitfield PatchInputsRead;  /**< VAR[0..31] usage for patch inputs (user-defined only) */
    GLbitfield PatchOutputsWritten; /**< VAR[0..31] usage for patch outputs (user-defined only) */
