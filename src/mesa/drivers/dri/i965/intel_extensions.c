@@ -204,6 +204,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_derivative_control = true;
       ctx->Extensions.ARB_framebuffer_no_attachments = true;
       ctx->Extensions.ARB_gpu_shader5 = true;
+      ctx->Extensions.ARB_gpu_shader_fp64 = true;
       ctx->Extensions.ARB_shader_atomic_counters = true;
       ctx->Extensions.ARB_shader_atomic_counter_ops = true;
       ctx->Extensions.ARB_shader_clock = true;
