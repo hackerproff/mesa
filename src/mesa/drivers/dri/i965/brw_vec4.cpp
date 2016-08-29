@@ -301,6 +301,20 @@ vec4_instruction::can_change_types() const
             !src[1].abs && !src[1].negate));
 }
 
+unsigned
+vec4_instruction::exec_data_size() const
+{
+  unsigned exec_data_size = 0;
+
+  for (int i = 0; i < 3; i++) {
+    if (this->src[i].type != BAD_FILE)
+      exec_data_size = MAX2(exec_data_size, type_sz(this->src[i].type));
+  }
+
+  return exec_data_size;
+}
+
+
 /**
  * Returns how many MRFs an opcode will write over.
  *
@@ -2075,6 +2089,10 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
       if (inst->opcode == BRW_OPCODE_SEL && type_sz(inst->dst.type) == 8)
          lowered_width = MIN2(lowered_width, 4);
 
+      if (devinfo->gen == 7 && !devinfo->is_haswell &&
+          inst->exec_data_size() == 8)
+         lowered_width = MIN2(lowered_width, 4);
+
       /* HSW PRM, 3D Media GPGPU Engine, Region Alignment Rules for Direct
        * Register Addressing:
        *
@@ -2156,7 +2174,6 @@ vec4_visitor::lower_simd_width()
       bool needs_temp = dst_src_regions_overlap(inst);
       for (unsigned n = 0; n < inst->exec_size / lowered_width; n++)  {
          unsigned channel_offset = lowered_width * n;
-
          unsigned size_written = lowered_width * type_sz(inst->dst.type);
 
          /* Create the split instruction from the original so that we copy all
@@ -2180,7 +2197,8 @@ vec4_visitor::lower_simd_width()
                inst->insert_before(block, copy);
             }
          } else {
-            dst = horiz_offset(inst->dst, channel_offset);
+            if (inst->dst.file != ARF && inst->dst.file != FIXED_GRF && inst->dst.file != IMM)
+               dst = horiz_offset(inst->dst, channel_offset);
          }
          linst->dst = dst;
 
