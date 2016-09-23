@@ -88,7 +88,8 @@ var_from_reg(const simple_allocator &alloc, const src_reg &reg,
           reg.reg_offset < alloc.sizes[reg.nr] && c < 4);
    const unsigned csize = DIV_ROUND_UP(type_sz(reg.type), 4);
    return 8 * (alloc.offsets[reg.nr] + reg.reg_offset) +
-           (BRW_GET_SWZ(reg.swizzle, c) + k / csize * 4) * csize + k % csize;
+           (BRW_GET_SWZ(reg.swizzle, c) + k / csize * 4) * csize + k % csize +
+           reg.subnr;
 }
 
 inline unsigned
@@ -99,7 +100,7 @@ var_from_reg(const simple_allocator &alloc, const dst_reg &reg,
           reg.reg_offset < alloc.sizes[reg.nr] && c < 4);
    const unsigned csize = DIV_ROUND_UP(type_sz(reg.type), 4);
    return 8 * (alloc.offsets[reg.nr] + reg.reg_offset) +
-      (c + k / csize * 4) * csize + k % csize;
+           (c + k / csize * 4) * csize + k % csize + reg.subnr;
 }
 
 } /* namespace brw */
