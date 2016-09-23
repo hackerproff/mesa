@@ -47,6 +47,7 @@ is_direct_copy(vec4_instruction *inst)
 	   !inst->predicate &&
 	   inst->dst.file == VGRF &&
 	   !inst->dst.reladdr &&
+           inst->exec_size == 8 &&
 	   !inst->src[0].reladdr &&
 	   (inst->dst.type == inst->src[0].type ||
             (inst->dst.type == BRW_REGISTER_TYPE_F &&
@@ -495,8 +496,8 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	     inst->src[i].reladdr)
 	    continue;
 
-         /* We only handle single-register copies. */
-         if (inst->regs_read(i) != 1)
+         /* We only handle full single-register copies. */
+         if (inst->regs_read(i) != 1 || inst->exec_size < 8)
             continue;
 
          const unsigned reg = (alloc.offsets[inst->src[i].nr] +
