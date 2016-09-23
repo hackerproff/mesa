@@ -194,7 +194,6 @@ vec4_instruction::has_source_and_destination_hazard() const
    case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
    case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
    case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
-   case VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB:
       return true;
    default:
       /* 8-wide compressed DF operations are executed as two 4-wide operations,
@@ -256,7 +255,6 @@ vec4_instruction::can_do_writemask(const struct gen_device_info *devinfo)
    switch (opcode) {
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
    case VEC4_OPCODE_DOUBLE_TO_SINGLE:
-   case VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB:
    case VEC4_OPCODE_SINGLE_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:
@@ -532,7 +530,6 @@ vec4_visitor::opt_reduce_swizzle()
 
       case VEC4_OPCODE_SINGLE_TO_DOUBLE:
       case VEC4_OPCODE_DOUBLE_TO_SINGLE:
-      case VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB:
       case VEC4_OPCODE_PICK_LOW_32BIT:
       case VEC4_OPCODE_PICK_HIGH_32BIT:
       case VEC4_OPCODE_SET_LOW_32BIT:
@@ -2027,6 +2024,7 @@ vec4_visitor::convert_to_hw_regs()
       case VGRF: {
          unsigned width = REG_SIZE / MAX2(4, type_sz(dst.type));
          reg = brw_vecn_grf(width, dst.nr + dst.reg_offset, 0);
+         reg.subnr = dst.subnr * type_sz(dst.type);
          reg.type = dst.type;
          reg.writemask = dst.writemask;
          break;
@@ -2092,8 +2090,7 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
          lowered_width = MIN2(lowered_width, 4);
 
       if (devinfo->gen == 7 &&
-          !devinfo->is_haswell && inst->exec_data_size() == 8 &&
-          inst->opcode != VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB)
+          !devinfo->is_haswell && inst->exec_data_size() == 8)
          lowered_width = MIN2(lowered_width, 4);
 
       /* HSW PRM, 3D Media GPGPU Engine, Region Alignment Rules for Direct
@@ -2247,7 +2244,6 @@ is_align1_df(vec4_instruction *inst)
 {
    switch (inst->opcode) {
       case VEC4_OPCODE_DOUBLE_TO_SINGLE:
-      case VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB:
       case VEC4_OPCODE_SINGLE_TO_DOUBLE:
       case VEC4_OPCODE_PICK_LOW_32BIT:
       case VEC4_OPCODE_PICK_HIGH_32BIT:

@@ -1918,80 +1918,29 @@ generate_code(struct brw_codegen *p,
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-         dst.hstride = BRW_HORIZONTAL_STRIDE_2;
+         /* When converting from DF->F, we set destiny's stride as 2 as an
+          * aligment requirement. But in Ivy, each DF implicitly writes 2 F,
+          * being the first one the converted value. So we don't need to
+          * explicitly set stride 2, but 1.
+          */
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
+            dst.hstride = BRW_HORIZONTAL_STRIDE_1;
+         else
+            dst.hstride = BRW_HORIZONTAL_STRIDE_2;
          dst.width = BRW_WIDTH_4;
          src[0].vstride = BRW_VERTICAL_STRIDE_4;
          src[0].width = BRW_WIDTH_4;
          brw_MOV(p, dst, src[0]);
 
          struct brw_reg dst_as_src = dst;
+         /* As we have set horizontal stride 1 instead of 2 in Ivy, we need to
+          * fix it here to have the expected value.
+          */
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
+            dst_as_src.hstride = BRW_HORIZONTAL_STRIDE_2;
          dst.hstride = BRW_HORIZONTAL_STRIDE_1;
          dst.width = BRW_WIDTH_8;
          brw_MOV(p, dst, dst_as_src);
-
-         brw_set_default_access_mode(p, BRW_ALIGN_16);
-         break;
-      }
-
-      case VEC4_OPCODE_DOUBLE_TO_SINGLE_IVB: {
-         assert(type_sz(src[0].type) == 8);
-         assert(type_sz(src[1].type) == 4);
-         assert(type_sz(dst.type) == 4);
-         assert(devinfo->gen == 7 && !devinfo->is_haswell);
-
-         brw_set_default_access_mode(p, BRW_ALIGN_1);
-
-         /* When converting from DF->F, we set destiny's stride as 2 as an
-          * aligment requirement. But in Ivy, each DF implicitly writes 2 F,
-          * being the first one the converted value. So we don't need to
-          * explicitly set stride 2, but 1.
-          */
-         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
-         dst.width = BRW_WIDTH_4;
-         src[0].vstride = BRW_VERTICAL_STRIDE_4;
-         src[0].width = BRW_WIDTH_4;
-         brw_MOV(p, dst, src[0]);
-
-         struct brw_reg dst_as_src = dst;
-         /* As we have set horizontal stride 1 instead of 2, we need
-          * to fix it here to have the expected value.
-          */
-         dst_as_src.hstride = BRW_HORIZONTAL_STRIDE_2;
-         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
-         dst.width = BRW_WIDTH_8;
-         brw_MOV(p, dst, dst_as_src);
-
-         /* Second vertex's DF */
-         brw_set_default_mask_control(p, true);
-         struct brw_reg temp3 = src[1];
-         /* When converting from DF->F, we set destiny's stride as 2 as an
-          * aligment requirement. But in Ivy, each DF implicitly writes 2 F,
-          * being the first one the converted value. So we don't need to
-          * explicitly set stride 2, but 1.
-          */
-         temp3.hstride = BRW_HORIZONTAL_STRIDE_1;
-         temp3.width = BRW_WIDTH_4;
-         src[0].nr += 1;
-         src[0].vstride = BRW_VERTICAL_STRIDE_4;
-         src[0].width = BRW_WIDTH_4;
-         brw_MOV(p, temp3, src[0]);
-
-         dst_as_src = temp3;
-         /* As we have set horizontal stride 1 instead of 2, we need
-          * to fix it here to have the expected value.
-          */
-         dst_as_src.hstride = BRW_HORIZONTAL_STRIDE_2;
-         dst_as_src.vstride = BRW_VERTICAL_STRIDE_8;
-         temp3.hstride = BRW_HORIZONTAL_STRIDE_1;
-         temp3.width = BRW_WIDTH_8;
-         brw_MOV(p, temp3, dst_as_src);
-
-
-         dst.subnr = 4 * 4;
-         brw_set_default_mask_control(p, inst->force_writemask_all);
-         brw_set_default_group(p, 4);
-         struct brw_inst *insn = brw_MOV(p, dst, src[1]);
-         brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_4);
 
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;
