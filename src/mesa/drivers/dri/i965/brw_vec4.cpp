@@ -2186,9 +2186,10 @@ vec4_visitor::lower_simd_width()
          linst->group = channel_offset;
          linst->regs_written = regs_written;
 
+         bool d2f_pass = (inst->opcode == VEC4_OPCODE_DOUBLE_TO_SINGLE && n > 0);
          /* Compute split dst region */
          dst_reg dst;
-         if (needs_temp) {
+         if (needs_temp || d2f_pass) {
             dst = retype(dst_reg(VGRF, alloc.allocate(1)), inst->dst.type);
             if (inst->is_align1_partial_write()) {
                vec4_instruction *copy = MOV(dst, src_reg(inst->dst));
@@ -2219,10 +2220,16 @@ vec4_visitor::lower_simd_width()
          /* If we used a temporary to store the result of the split
           * instruction, copy the result to the original destination
           */
-         if (needs_temp) {
-            vec4_instruction *mov = MOV(offset(inst->dst, n), src_reg(dst));
+         if (needs_temp || d2f_pass) {
+            vec4_instruction *mov;
+            if (d2f_pass) {
+               mov = MOV(horiz_offset(inst->dst, n * type_sz(inst->dst.type)), src_reg(dst));
+               mov->group = 0;
+            } else {
+               mov = MOV(offset(inst->dst, n), src_reg(dst));
+               mov->group = channel_offset;
+            }
             mov->exec_size = lowered_width;
-            mov->group = channel_offset;
             mov->regs_written = regs_written;
             mov->predicate = inst->predicate;
             inst->insert_before(block, mov);
