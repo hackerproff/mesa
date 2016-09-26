@@ -1928,17 +1928,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
           */
 
          /* Check for zero */
-
-         if (devinfo->gen == 7 && !devinfo->is_haswell) {
-            dst_reg is_nonzero = dst_reg(this, glsl_type::dvec4_type);
-            dst_reg is_nonzero_f = dst_reg(this, glsl_type::vec4_type);
-
-            emit(CMP(is_nonzero, op[0], setup_imm_df(0.0), BRW_CONDITIONAL_NZ));
-            emit_double_to_single(is_nonzero_f, src_reg(is_nonzero), false, BRW_REGISTER_TYPE_F);
-            emit(CMP(dst_null_f(), src_reg(is_nonzero_f), brw_imm_f(0.0f), BRW_CONDITIONAL_NZ));
-         } else {
-            emit(CMP(dst_null_df(), op[0], setup_imm_df(0.0), BRW_CONDITIONAL_NZ));
-         }
+         emit(CMP(dst_null_df(), op[0], setup_imm_df(0.0), BRW_CONDITIONAL_NZ));
 
          /* AND each high 32-bit channel with 0x80000000u */
          dst_reg tmp = dst_reg(this, glsl_type::uvec4_type);

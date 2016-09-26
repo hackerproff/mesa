@@ -2177,6 +2177,11 @@ vec4_visitor::lower_simd_width()
        * value of the instruction's dst.
        */
       bool needs_temp = dst_src_regions_overlap(inst);
+      bool cmp_dst_null = (inst->opcode == BRW_OPCODE_CMP && inst->dst.is_null());
+      dst_reg cmp_dst;
+      if (cmp_dst_null)
+         cmp_dst = retype(dst_reg(VGRF, alloc.allocate(1)), BRW_REGISTER_TYPE_F);
+
       for (unsigned n = 0; n < inst->exec_size / lowered_width; n++)  {
          unsigned channel_offset = lowered_width * n;
          unsigned regs_written =
@@ -2192,9 +2197,10 @@ vec4_visitor::lower_simd_width()
          linst->regs_written = regs_written;
 
          bool d2f_pass = (inst->opcode == VEC4_OPCODE_DOUBLE_TO_SINGLE && n > 0);
+
          /* Compute split dst region */
          dst_reg dst;
-         if (needs_temp || d2f_pass) {
+         if (needs_temp || d2f_pass || cmp_dst_null) {
             dst = retype(dst_reg(VGRF, alloc.allocate(1)), inst->dst.type);
             if (inst->is_align1_partial_write()) {
                vec4_instruction *copy = MOV(dst, src_reg(inst->dst));
@@ -2222,26 +2228,56 @@ vec4_visitor::lower_simd_width()
 
          inst->insert_before(block, linst);
 
+         dst_reg d2f_dst;
+         if (cmp_dst_null) {
+            d2f_dst = retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_F);
+            vec4_instruction *d2f = new(mem_ctx) vec4_instruction(VEC4_OPCODE_DOUBLE_TO_SINGLE, d2f_dst, src_reg(dst));
+            d2f->group = 0;
+            d2f->exec_size = lowered_width;
+            d2f->regs_written = regs_written;
+            d2f->predicate = inst->predicate;
+            inst->insert_before(block, d2f);
+         }
+
          /* If we used a temporary to store the result of the split
           * instruction, copy the result to the original destination
           */
-         if (needs_temp || d2f_pass) {
+         if (needs_temp || d2f_pass || cmp_dst_null) {
             vec4_instruction *mov;
             if (d2f_pass) {
                mov = MOV(horiz_offset(inst->dst, n * type_sz(inst->dst.type)), src_reg(dst));
                mov->group = 0;
+               mov->exec_size = lowered_width;
+               mov->regs_written = regs_written;
+               mov->predicate = inst->predicate;
+            } else if (cmp_dst_null) {
+               //mov = MOV(horiz_offset(cmp_dst, n * type_sz(inst->dst.type)), src_reg(dst));
+               //mov = emit(VEC4_OPCODE_DOUBLE_TO_SINGLE, offset(cmp_dst, n), src_reg(dst));
+               //mov = new(mem_ctx) vec4_instruction(VEC4_OPCODE_DOUBLE_TO_SINGLE, offset(cmp_dst, n), src_reg(dst));
+               //mov = MOV(offset(cmp_dst, n), src_reg(d2f_dst));
+               mov = MOV(horiz_offset(cmp_dst, n * 4), src_reg(d2f_dst));
+               mov->regs_written = regs_written;
+               mov->exec_size = lowered_width;
+               mov->predicate = inst->predicate;
+               mov->group = 0;
             } else {
                mov = MOV(offset(inst->dst, n), src_reg(dst));
                mov->group = channel_offset;
+               mov->exec_size = lowered_width;
+               mov->regs_written = regs_written;
+               mov->predicate = inst->predicate;
             }
-            mov->exec_size = lowered_width;
-            mov->regs_written = regs_written;
-            mov->predicate = inst->predicate;
             inst->insert_before(block, mov);
          }
       }
 
-      inst->remove(block);
+      if (cmp_dst_null) {
+         inst->dst.type = BRW_REGISTER_TYPE_F;
+         inst->src[0] = src_reg(cmp_dst);
+         inst->src[1] = brw_imm_f(0.0f);
+      } else {
+         inst->remove(block);
+      }
       progress = true;
    }
 
@@ -2618,7 +2654,10 @@ vec4_visitor::run()
    int iteration = 0;
    int pass_num = 0;
 
-   OPT(lower_simd_width);
+   // do {
+   //    progress = false;
+      OPT(lower_simd_width);
+   // } while (progress);
 
    do {
       progress = false;
