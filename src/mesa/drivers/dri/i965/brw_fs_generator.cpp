@@ -1724,7 +1724,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
        */
       if (devinfo->gen == 7 && !devinfo->is_haswell &&
           type_sz(inst->src[0].type) > type_sz(inst->dst.type)) {
-         assert(inst->dst.stride == 2);
+         assert(inst->dst.stride == 2 || inst->dst.stride == 1);
          inst->dst.stride = 1;
       }
       dst = brw_reg_from_fs_reg(compiler, inst, &inst->dst, compressed);
