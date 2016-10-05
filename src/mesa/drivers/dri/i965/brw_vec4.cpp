@@ -2245,7 +2245,7 @@ vec4_visitor::lower_simd_width()
          if (cmpnz_dst_null) {
             d2f_dst = retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_F);
             vec4_instruction *d2f = new(mem_ctx) vec4_instruction(VEC4_OPCODE_DOUBLE_TO_SINGLE, d2f_dst, src_reg(dst));
-            d2f->group = 0;
+            d2f->group = channel_offset;
             d2f->exec_size = lowered_width;
             d2f->size_written = size_written;
             d2f->predicate = inst->predicate;
