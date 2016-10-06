@@ -330,8 +330,6 @@ public:
                               brw_reg_type single_type);
 
    src_reg setup_imm_df(double v);
-   src_reg setup_imm_df(struct bblock_t *block, vec4_instruction *inst,
-                        double v);
 
    vec4_instruction *shuffle_64bit_data(dst_reg dst, src_reg src,
                                         bool for_write,

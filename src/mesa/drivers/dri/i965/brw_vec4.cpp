@@ -2149,47 +2149,6 @@ dst_src_regions_overlap(vec4_instruction *inst)
    return false;
 }
 
-src_reg
-vec4_visitor::setup_imm_df(struct bblock_t *block, vec4_instruction *inst,
-                           double v)
-{
-   assert(devinfo->gen >= 7);
-
-   if (devinfo->gen >= 8)
-      return brw_imm_df(v);
-
-   /* gen7 does not support DF immediates */
-   union {
-      double d;
-      struct {
-         uint32_t i1;
-         uint32_t i2;
-      };
-   } di;
-
-   di.d = v;
-
-   /* Write the low 32-bit of the constant to the X:UD channel and the
-    * high 32-bit to the Y:UD channel to build the constant in a VGRF.
-    * We have to do this twice (offset 0 and offset 1), since a DF VGRF takes
-    * two SIMD8 registers in SIMD4x2 execution. Finally, return a swizzle
-    * XXXX so any access to the VGRF only reads the constant data in these
-    * channels.
-    */
-   const dst_reg tmp =
-      retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_UD);
-   for (int n = 0; n < 2; n++) {
-      vec4_instruction *mov = new(mem_ctx) vec4_instruction(BRW_OPCODE_MOV, writemask(offset(tmp, n), WRITEMASK_X), brw_imm_ud(di.i1));
-      mov->force_writemask_all = true;
-      inst->insert_before(block, mov);
-      mov = new(mem_ctx) vec4_instruction(BRW_OPCODE_MOV, writemask(offset(tmp, n), WRITEMASK_Y), brw_imm_ud(di.i2));
-      mov->force_writemask_all = true;
-      inst->insert_before(block, mov);
-   }
-
-   return swizzle(src_reg(retype(tmp, BRW_REGISTER_TYPE_DF)), BRW_SWIZZLE_XXXX);
-}
-
 bool
 vec4_visitor::lower_simd_width()
 {
@@ -2216,35 +2175,15 @@ vec4_visitor::lower_simd_width()
        */
       bool needs_temp = dst_src_regions_overlap(inst);
 
-      /* When splitting instructions with conditional modifiers and NULL
+      /* FIXME: HORRIBLE COMMENT. When splitting CMP.NZ instruction with NULL
        * dest we can't rely directly on the flags to store the result. Rather,
        * we need first to enqueue the result in a temporal variable, and then
-       * move those values into flags.
-       */
-      bool inst_dst_null =
-         inst->dst.is_null() &&
-         inst->exec_data_size() == 8 &&
-         inst->conditional_mod != BRW_CONDITIONAL_NONE;
-
-      /* Replace MOV.XX with null destination with the equivalente CMP.XX
-       * with null destination, so we can lower it as explained before.
-       */
-      if (inst_dst_null && inst->opcode == BRW_OPCODE_MOV) {
-         vec4_instruction *cmp =
-            new(mem_ctx) vec4_instruction(BRW_OPCODE_CMP, dst_null_df(),
-                                          inst->src[0],
-                                          setup_imm_df(block, inst, 0.0));
-         cmp->conditional_mod = inst->conditional_mod;
-         cmp->exec_size = inst->exec_size;
-         cmp->group = inst->group;
-         cmp->size_written = inst->size_written;
-         inst->insert_before(block, cmp);
-         inst->remove(block);
-         inst = cmp;
-      }
-      dst_reg inst_dst;
-      if (inst_dst_null)
-         inst_dst =
+       * move those values into flags */
+      bool cmpnz_dst_null = (inst->opcode == BRW_OPCODE_CMP &&
+                             inst->dst.is_null());
+      dst_reg cmpnz_dst;
+      if (cmpnz_dst_null)
+         cmpnz_dst =
             retype(dst_reg(VGRF, alloc.allocate(1)), BRW_REGISTER_TYPE_F);
 
       for (unsigned n = 0; n < inst->exec_size / lowered_width; n++)  {
@@ -2270,7 +2209,7 @@ vec4_visitor::lower_simd_width()
 
          /* Compute split dst region */
          dst_reg dst;
-         if (needs_temp || d2f_pass || inst_dst_null) {
+         if (needs_temp || d2f_pass || cmpnz_dst_null) {
             dst = retype(dst_reg(VGRF, alloc.allocate(1)), inst->dst.type);
             if (inst->is_align1_partial_write()) {
                vec4_instruction *copy = MOV(dst, src_reg(inst->dst));
@@ -2299,7 +2238,7 @@ vec4_visitor::lower_simd_width()
          inst->insert_before(block, linst);
 
          dst_reg d2f_dst;
-         if (inst_dst_null) {
+         if (cmpnz_dst_null) {
             d2f_dst = retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_F);
             vec4_instruction *d2f = new(mem_ctx) vec4_instruction(VEC4_OPCODE_DOUBLE_TO_SINGLE, d2f_dst, src_reg(dst));
             d2f->group = channel_offset;
@@ -2312,12 +2251,12 @@ vec4_visitor::lower_simd_width()
          /* If we used a temporary to store the result of the split
           * instruction, copy the result to the original destination
           */
-         if (needs_temp || d2f_pass || inst_dst_null) {
+         if (needs_temp || d2f_pass || cmpnz_dst_null) {
             vec4_instruction *mov;
             if (d2f_pass)
                mov = MOV(horiz_offset(inst->dst, n * type_sz(inst->dst.type)), src_reg(dst));
-            else if (inst_dst_null)
-               mov = MOV(horiz_offset(inst_dst, n * 4), src_reg(d2f_dst));
+            else if (cmpnz_dst_null)
+               mov = MOV(horiz_offset(cmpnz_dst, n * 4), src_reg(d2f_dst));
             else
                mov = MOV(offset(inst->dst, n), src_reg(dst));
             mov->group = channel_offset;
@@ -2331,9 +2270,9 @@ vec4_visitor::lower_simd_width()
       /* For cmp.nz instruction, we need to set the flags correctly. We do
        * this by comparing the register that has the results against 0.0,
        * getting the values in the flags */
-      if (inst_dst_null) {
+      if (cmpnz_dst_null) {
          inst->dst.type = BRW_REGISTER_TYPE_F;
-         inst->src[0] = src_reg(inst_dst);
+         inst->src[0] = src_reg(cmpnz_dst);
          inst->src[1] = brw_imm_f(0.0f);
          inst->conditional_mod = BRW_CONDITIONAL_NZ;
       } else {
