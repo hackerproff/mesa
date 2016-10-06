@@ -2222,8 +2222,8 @@ vec4_visitor::lower_simd_width()
        * move those values into flags.
        */
       bool inst_dst_null =
-         inst->dst.is_null() &&
-         inst->exec_data_size() == 8 &&
+         (inst->opcode == BRW_OPCODE_MOV || inst->opcode == BRW_OPCODE_CMP) &&
+         inst->dst.is_null() && inst->exec_data_size() == 8 &&
          inst->conditional_mod != BRW_CONDITIONAL_NONE;
 
       /* Replace MOV.XX with null destination with the equivalente CMP.XX
