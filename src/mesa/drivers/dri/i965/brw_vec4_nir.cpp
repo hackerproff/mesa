@@ -1931,14 +1931,11 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
           */
 
          /* Check for zero */
-         if (devinfo->gen == 7 && !devinfo->is_haswell) {
-            emit(CMP(dst_null_df(), op[0], setup_imm_df(0.0), BRW_CONDITIONAL_NZ));
-         } else {
-            src_reg value = op[0];
-            value.abs = true;
-            inst = emit(MOV(dst_null_df(), value));
-            inst->conditional_mod = BRW_CONDITIONAL_NZ;
-         }
+         src_reg value = op[0];
+         value.abs = true;
+         inst = emit(MOV(dst_null_df(), value));
+         inst->conditional_mod = BRW_CONDITIONAL_NZ;
+
          /* AND each high 32-bit channel with 0x80000000u */
          dst_reg tmp = dst_reg(this, glsl_type::uvec4_type);
          emit(VEC4_OPCODE_PICK_HIGH_32BIT, tmp, op[0]);
