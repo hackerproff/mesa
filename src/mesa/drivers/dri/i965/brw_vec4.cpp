@@ -2226,6 +2226,22 @@ vec4_visitor::lower_simd_width()
          inst->exec_data_size() == 8 &&
          inst->conditional_mod != BRW_CONDITIONAL_NONE;
 
+      /* Replace MOV.XX with null destination with the equivalente CMP.XX
+       * with null destination, so we can lower it as explained before.
+       */
+      if (inst_dst_null && inst->opcode == BRW_OPCODE_MOV) {
+         vec4_instruction *cmp =
+            new(mem_ctx) vec4_instruction(BRW_OPCODE_CMP, dst_null_df(),
+                                          inst->src[0],
+                                          setup_imm_df(block, inst, 0.0));
+         cmp->conditional_mod = inst->conditional_mod;
+         cmp->exec_size = inst->exec_size;
+         cmp->group = inst->group;
+         cmp->size_written = inst->size_written;
+         inst->insert_before(block, cmp);
+         inst->remove(block);
+         inst = cmp;
+      }
       dst_reg inst_dst;
       if (inst_dst_null)
          inst_dst =
