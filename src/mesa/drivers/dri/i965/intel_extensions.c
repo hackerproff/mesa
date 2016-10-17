@@ -209,6 +209,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_gpu_shader_fp64 = true;
       ctx->Extensions.ARB_shader_atomic_counters = true;
       ctx->Extensions.ARB_shader_atomic_counter_ops = true;
+      ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_shader_clock = true;
       ctx->Extensions.ARB_shader_image_load_store = true;
       ctx->Extensions.ARB_shader_image_size = true;
@@ -242,7 +243,6 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen >= 8 || brw->is_haswell) {
       ctx->Extensions.ARB_gpu_shader_fp64 = true;
-      ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
       ctx->Extensions.OES_geometry_shader = true;
