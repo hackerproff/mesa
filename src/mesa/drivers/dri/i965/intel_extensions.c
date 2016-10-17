@@ -356,6 +356,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_clock = true;
       ctx->Extensions.ARB_shader_image_load_store = true;
       ctx->Extensions.ARB_shader_image_size = true;
+      ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_shader_texture_image_samples = true;
       ctx->Extensions.ARB_tessellation_shader = true;
       ctx->Extensions.ARB_texture_compression_bptc = true;
@@ -365,10 +366,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_shader_samples_identical = true;
       ctx->Extensions.OES_primitive_bounding_box = true;
       ctx->Extensions.OES_texture_buffer = true;
-
-      if (brw->gen >= 8 || brw->is_haswell) {
-         ctx->Extensions.ARB_shader_precision = true;
-      }
 
       if (brw->can_do_pipelined_register_writes) {
          ctx->Extensions.ARB_draw_indirect = true;
