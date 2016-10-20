@@ -64,6 +64,7 @@ gen8_emit_vertices(struct brw_context *brw)
 
    const struct brw_vs_prog_data *vs_prog_data =
       brw_vs_prog_data(brw->vs.base.prog_data);
+   /* p ((struct brw_vertex_program *)brw->vertex_program)->program.Base.nir->info.double_inputs_read */
 
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
       unsigned vue = brw->vb.nr_enabled;
