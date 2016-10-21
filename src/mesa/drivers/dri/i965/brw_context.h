@@ -583,7 +583,7 @@ struct brw_vertex_element {
    const struct gl_client_array *glarray;
 
    int buffer;
-
+   bool may_need_double_slot;
    /** Offset of the first element within the buffer object */
    unsigned int offset;
 };

@@ -64,6 +64,7 @@ gen8_emit_vertices(struct brw_context *brw)
 
    const struct brw_vs_prog_data *vs_prog_data =
       brw_vs_prog_data(brw->vs.base.prog_data);
+
    /* p ((struct brw_vertex_program *)brw->vertex_program)->program.Base.nir->info.double_inputs_read */
 
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
@@ -256,11 +257,20 @@ gen8_emit_vertices(struct brw_context *brw)
          case 0:
          case 1:
          case 2:
+            if (!input->may_need_double_slot) {
             /*  Use 128-bits instead of 256-bits to write double and dvec2
              *  vertex elements.
              */
             comp2 = BRW_VE1_COMPONENT_NOSTORE;
             comp3 = BRW_VE1_COMPONENT_NOSTORE;
+            } else {
+               /* The attribute was defined as a dvec3/dvec4 in the shader,
+                * we better upload it using 256-bits
+                */
+            comp2 = BRW_VE1_COMPONENT_STORE_0;
+            comp3 = BRW_VE1_COMPONENT_STORE_0;
+            }
+
             break;
          case 3:
             /* Pad the output using VFCOMP_STORE_0 as suggested
