@@ -115,6 +115,8 @@ remap_vs_attrs(nir_block *block, struct nir_shader_info *nir_info)
                                       BITFIELD64_MASK(attr));
          int dslot = _mesa_bitcount_64(nir_info->double_inputs_read &
                                        BITFIELD64_MASK(attr));
+         printf("[%s] remap_vs_attrs: attr = %d, slot = %d, dslot = %d\n",
+                nir_info->name, attr, slot, dslot);
          intrin->const_index[0] = 4 * (slot + dslot);
       }
    }

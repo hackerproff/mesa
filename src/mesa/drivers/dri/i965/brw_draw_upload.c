@@ -467,6 +467,8 @@ brw_prepare_vertices(struct brw_context *brw)
    if (0)
       fprintf(stderr, "%s %d..%d\n", __func__, min_index, max_index);
 
+   printf("brw_prepare_vertices - START\n");
+
    /* Accumulate the list of enabled arrays. */
    brw->vb.nr_enabled = 0;
    while (vs_inputs) {
@@ -477,10 +479,14 @@ brw_prepare_vertices(struct brw_context *brw)
       } else {
          input->may_need_double_slot = false;
       }
+      printf("brw_prepare_vertices: index = %d, may_need_double_slot: %d\n",
+             index, input->may_need_double_slot);
 
       vs_inputs &= ~BITFIELD64_BIT(index);
       brw->vb.enabled[brw->vb.nr_enabled++] = input;
    }
+
+   printf("brw_prepare_vertices - END\n");
 
    if (brw->vb.nr_enabled == 0)
       return;
