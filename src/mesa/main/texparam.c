@@ -934,6 +934,14 @@ _mesa_texture_parameteriv(struct gl_context *ctx,
    switch (pname) {
    case GL_TEXTURE_BORDER_COLOR:
       {
+         if (ctx->API == API_OPENGLES2 && ctx->Version == 31) {
+            /* GL_TEXTURE_BORDER_COLOR is not allowed in OpenGL ES 3.1, see
+             * table in section 8.9 "Texture Parameters".
+             */
+            _mesa_error(ctx, GL_INVALID_ENUM, "glTextureParameteriv(texture)");
+            return;
+         }
+
          /* convert int params to float */
          GLfloat fparams[4];
          fparams[0] = INT_TO_FLOAT(params[0]);
@@ -974,6 +982,14 @@ _mesa_texture_parameterIiv(struct gl_context *ctx,
 {
    switch (pname) {
    case GL_TEXTURE_BORDER_COLOR:
+      if (ctx->API == API_OPENGLES2 && ctx->Version == 31) {
+         /* GL_TEXTURE_BORDER_COLOR is not allowed in OpenGL ES 3.1, see
+          * table in section 8.9 "Texture Parameters".
+          */
+         _mesa_error(ctx, GL_INVALID_ENUM, "glTextureParameteriv(texture)");
+         return;
+      }
+
       FLUSH_VERTICES(ctx, _NEW_TEXTURE);
       /* set the integer-valued border color */
       COPY_4V(texObj->Sampler.BorderColor.i, params);
@@ -992,6 +1008,14 @@ _mesa_texture_parameterIuiv(struct gl_context *ctx,
 {
    switch (pname) {
    case GL_TEXTURE_BORDER_COLOR:
+      if (ctx->API == API_OPENGLES2 && ctx->Version == 31) {
+         /* GL_TEXTURE_BORDER_COLOR is not allowed in OpenGL ES 3.1, see
+          * table in section 8.9 "Texture Parameters".
+          */
+         _mesa_error(ctx, GL_INVALID_ENUM, "glTextureParameteriv(texture)");
+         return;
+      }
+
       FLUSH_VERTICES(ctx, _NEW_TEXTURE);
       /* set the unsigned integer-valued border color */
       COPY_4V(texObj->Sampler.BorderColor.ui, params);
