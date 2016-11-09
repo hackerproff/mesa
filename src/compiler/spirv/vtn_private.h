@@ -480,7 +480,8 @@ typedef void (*vtn_execution_mode_foreach_cb)(struct vtn_builder *,
 void vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
                                 vtn_execution_mode_foreach_cb cb, void *data);
 
-nir_op vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap);
+nir_op vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap,
+                                       bool is_double_dst, bool is_double_src);
 
 void vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count);

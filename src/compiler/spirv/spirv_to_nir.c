@@ -1211,12 +1211,21 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
       default: {
          bool swap;
-         nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
-
-         unsigned num_components = glsl_get_vector_elements(val->const_type);
          unsigned bit_size =
             glsl_get_bit_size(val->const_type);
 
+         bool is_double_dst = bit_size == 64;
+         bool is_double_src = is_double_dst;
+         /* We assume there is no double conversion here */
+         assert(bit_size != 64 ||
+                (opcode != SpvOpConvertFToU && opcode != SpvOpConvertFToS &&
+                 opcode != SpvOpConvertSToF && opcode != SpvOpConvertUToF &&
+                 opcode != SpvOpFConvert));
+         nir_op op =
+            vtn_nir_alu_op_for_spirv_opcode(opcode, &swap,
+                                            is_double_dst, is_double_src);
+
+         unsigned num_components = glsl_get_vector_elements(val->const_type);
          nir_const_value src[4];
          assert(count <= 7);
          for (unsigned i = 0; i < count - 4; i++) {
@@ -1224,16 +1233,22 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                vtn_value(b, w[4 + i], vtn_value_type_constant)->constant;
 
             unsigned j = swap ? 1 - i : i;
-            assert(bit_size == 32);
             for (unsigned k = 0; k < num_components; k++)
-               src[j].u32[k] = c->value.u[k];
+               if (!is_double_src)
+                  src[j].u32[k] = c->value.u[k];
+               else
+                  src[j].f64[k] = c->value.d[k];
          }
 
          nir_const_value res = nir_eval_const_opcode(op, num_components,
                                                      bit_size, src);
 
-         for (unsigned k = 0; k < num_components; k++)
-            val->constant->value.u[k] = res.u32[k];
+         for (unsigned k = 0; k < num_components; k++) {
+            if (!is_double_dst)
+               val->constant->value.u[k] = res.u32[k];
+            else
+               val->constant->value.d[k] = res.f64[k];
+         }
 
          break;
       } /* default */

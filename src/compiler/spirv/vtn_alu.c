@@ -211,7 +211,8 @@ vtn_handle_matrix_alu(struct vtn_builder *b, SpvOp opcode,
 }
 
 nir_op
-vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap)
+vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap,
+                                bool is_double_dst, bool is_double_src)
 {
    /* Indicates that the first two arguments should be swapped.  This is
     * used for implementing greater-than and less-than-or-equal.
@@ -284,16 +285,21 @@ vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap)
    case SpvOpFUnordGreaterThanEqual:               return nir_op_fge;
 
    /* Conversions: */
-   case SpvOpConvertFToU:           return nir_op_f2u;
-   case SpvOpConvertFToS:           return nir_op_f2i;
-   case SpvOpConvertSToF:           return nir_op_i2f;
-   case SpvOpConvertUToF:           return nir_op_u2f;
+   case SpvOpConvertFToU:           return is_double_src ? nir_op_d2u : nir_op_f2u;
+   case SpvOpConvertFToS:           return is_double_src ? nir_op_d2i : nir_op_f2i;
+   case SpvOpConvertSToF:           return is_double_dst ? nir_op_i2d : nir_op_i2f;
+   case SpvOpConvertUToF:           return is_double_dst ? nir_op_u2d : nir_op_u2f;
    case SpvOpBitcast:               return nir_op_imov;
    case SpvOpUConvert:
    case SpvOpQuantizeToF16:         return nir_op_fquantize2f16;
-   /* TODO: NIR is 32-bit only; these are no-ops. */
+   /* TODO: int64 is not supported yet. This is a no-op. */
    case SpvOpSConvert:              return nir_op_imov;
-   case SpvOpFConvert:              return nir_op_fmov;
+   case SpvOpFConvert:
+      if (is_double_src && !is_double_dst)
+         return nir_op_d2f;
+      if (!is_double_src && is_double_dst)
+         return nir_op_f2d;
+      return nir_op_fmov;
 
    /* Derivatives: */
    case SpvOpDPdx:         return nir_op_fddx;
@@ -457,7 +463,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpFUnordLessThanEqual:
    case SpvOpFUnordGreaterThanEqual: {
       bool swap;
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
+      bool is_double_src = src[0]->bit_size;
+      bool is_double_dst = glsl_get_bit_size(val->ssa->type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap,
+                                                  is_double_dst, is_double_src);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -481,7 +490,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpFOrdLessThanEqual:
    case SpvOpFOrdGreaterThanEqual: {
       bool swap;
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
+      bool is_double_src = src[0]->bit_size;
+      bool is_double_dst = glsl_get_bit_size(val->ssa->type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap,
+                                                  is_double_dst, is_double_src);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -500,7 +512,12 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 
    default: {
       bool swap;
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
+      bool is_double_src = src[0]->bit_size == 64;
+      bool is_double_dst =
+         glsl_get_bit_size(val->ssa->type) == 64;
+
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap,
+                                                  is_double_dst, is_double_src);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
