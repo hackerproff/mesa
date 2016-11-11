@@ -315,6 +315,9 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       this->ordering = q.ordering;
    }
 
+   /* Point mode can only be true if set but we check anyway in case there are
+    * more options in the future.
+    */
    if (q.flags.q.point_mode) {
       if (this->flags.q.point_mode && this->point_mode != q.point_mode) {
          _mesa_glsl_error(loc, state, "conflicting point mode used");
@@ -581,6 +584,9 @@ ast_type_qualifier::validate_in_qualifier(YYLTYPE *loc,
                        "conflicting ordering specified");
    }
 
+   /* Point mode can only be true if set but we check anyway in case there are
+    * more options in the future.
+    */
    if (state->in_qualifier->flags.q.point_mode && this->flags.q.point_mode
        && state->in_qualifier->point_mode != this->point_mode) {
       r  = false;
