@@ -31,6 +31,14 @@
 #include "nir/nir_constant_expressions.h"
 #include "spirv_info.h"
 
+struct spec_constant_value {
+   bool is_double;
+   union {
+      uint32_t data32;
+      uint64_t data64;
+   };
+};
+
 void
 _vtn_warn(const char *file, int line, const char *msg, ...)
 {
@@ -952,11 +960,14 @@ spec_constant_decoration_cb(struct vtn_builder *b, struct vtn_value *v,
    if (dec->decoration != SpvDecorationSpecId)
       return;
 
-   uint32_t *const_value = data;
+   struct spec_constant_value *const_value = data;
 
    for (unsigned i = 0; i < b->num_specializations; i++) {
       if (b->specializations[i].id == dec->literals[0]) {
-         *const_value = b->specializations[i].data;
+         if (const_value->is_double)
+            const_value->data64 = b->specializations[i].data64;
+         else
+            const_value->data32 = b->specializations[i].data32;
          return;
       }
    }
@@ -966,8 +977,22 @@ static uint32_t
 get_specialization(struct vtn_builder *b, struct vtn_value *val,
                    uint32_t const_value)
 {
-   vtn_foreach_decoration(b, val, spec_constant_decoration_cb, &const_value);
-   return const_value;
+   struct spec_constant_value data;
+   data.is_double = false;
+   data.data32 = const_value;
+   vtn_foreach_decoration(b, val, spec_constant_decoration_cb, &data);
+   return data.data32;
+}
+
+static uint64_t
+get_specialization64(struct vtn_builder *b, struct vtn_value *val,
+                   uint64_t const_value)
+{
+   struct spec_constant_value data;
+   data.is_double = true;
+   data.data64 = const_value;
+   vtn_foreach_decoration(b, val, spec_constant_decoration_cb, &data);
+   return data.data64;
 }
 
 static void
@@ -1026,10 +1051,27 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       }
       break;
    }
-   case SpvOpSpecConstant:
+   case SpvOpSpecConstant: {
       assert(glsl_type_is_scalar(val->const_type));
-      val->constant->value.u[0] = get_specialization(b, val, w[3]);
+      int bit_size = glsl_get_bit_size(val->const_type);
+      if (bit_size == 64) {
+         union {
+            double d;
+            uint64_t u64;
+            struct {
+               uint32_t u1;
+               uint32_t u2;
+            };
+         } di;
+         di.u1 = w[3];
+         di.u2 = w[4];
+         di.u64 = get_specialization64(b, val, di.u64);
+         val->constant->value.d[0] = di.d;
+      } else {
+         val->constant->value.u[0] = get_specialization(b, val, w[3]);
+      }
       break;
+   }
    case SpvOpSpecConstantComposite:
    case SpvOpConstantComposite: {
       unsigned elem_count = count - 3;
