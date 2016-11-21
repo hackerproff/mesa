@@ -344,6 +344,7 @@ struct vtn_decoration {
 
 struct vtn_builder {
    nir_builder nb;
+   const nir_shader_compiler_options *nir_options;
 
    nir_shader *shader;
    nir_function_impl *impl;

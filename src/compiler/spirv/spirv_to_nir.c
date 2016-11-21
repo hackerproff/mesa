@@ -3061,6 +3061,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    exec_list_make_empty(&b->functions);
    b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;
+   b->nir_options = options;
 
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
