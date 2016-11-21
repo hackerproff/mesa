@@ -2525,6 +2525,13 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityInputAttachment:
          break;
 
+      case SpvCapabilityFloat64:
+         if (!b->nir_options->native_float64) {
+            vtn_warn("Unsupported SPIR-V capability: %s",
+                     spirv_capability_to_string(cap));
+         }
+         break;
+
       case SpvCapabilityGeometryStreams:
       case SpvCapabilityTessellation:
       case SpvCapabilityTessellationPointSize:
@@ -2532,7 +2539,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityVector16:
       case SpvCapabilityFloat16Buffer:
       case SpvCapabilityFloat16:
-      case SpvCapabilityFloat64:
       case SpvCapabilityInt64:
       case SpvCapabilityInt64Atomics:
       case SpvCapabilityAtomicStorage:
