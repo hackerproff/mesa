@@ -98,14 +98,19 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_DOUBLE: {
+      int bit_size = glsl_get_bit_size(type);
       if (glsl_type_is_vector_or_scalar(type)) {
          unsigned num_components = glsl_get_vector_elements(val->type);
          nir_load_const_instr *load =
-            nir_load_const_instr_create(b->shader, num_components, 32);
+            nir_load_const_instr_create(b->shader, num_components, bit_size);
 
-         for (unsigned i = 0; i < num_components; i++)
-            load->value.u32[i] = constant->value.u[i];
+         for (unsigned i = 0; i < num_components; i++) {
+            if (bit_size == 64)
+               load->value.f64[i] = constant->value.d[i];
+            else
+               load->value.u32[i] = constant->value.u[i];
+         }
 
          nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
          val->def = &load->def;
@@ -119,10 +124,14 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
             struct vtn_ssa_value *col_val = rzalloc(b, struct vtn_ssa_value);
             col_val->type = glsl_get_column_type(val->type);
             nir_load_const_instr *load =
-               nir_load_const_instr_create(b->shader, rows, 32);
+               nir_load_const_instr_create(b->shader, rows, bit_size);
 
-            for (unsigned j = 0; j < rows; j++)
-               load->value.u32[j] = constant->value.u[rows * i + j];
+            for (unsigned j = 0; j < rows; j++) {
+               if (bit_size == 64)
+                  load->value.f64[j] = constant->value.d[rows * i + j];
+               else
+                  load->value.u32[j] = constant->value.u[rows * i + j];
+            }
 
             nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
             col_val->def = &load->def;
@@ -131,6 +140,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
          }
       }
       break;
+   }
 
    case GLSL_TYPE_ARRAY: {
       unsigned elems = glsl_get_length(val->type);
