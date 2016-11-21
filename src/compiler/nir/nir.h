@@ -1758,6 +1758,11 @@ typedef struct nir_shader_compiler_options {
     */
    bool native_integers;
 
+   /**
+    * Does the driver support 64-bit floats?
+    */
+   bool native_float64;
+
    /* Indicates that the driver only has zero-based vertex id */
    bool vertex_id_zero_based;
 
