@@ -43,33 +43,36 @@
    .use_interpolated_input_intrinsics = true,                                 \
    .vertex_id_zero_based = true
 
-static const struct nir_shader_compiler_options scalar_nir_options = {
+#define COMMON_SCALAR_NIR_OPTIONS                                             \
+   .lower_pack_half_2x16 = true,                                              \
+   .lower_pack_snorm_2x16 = true,                                             \
+   .lower_pack_snorm_4x8 = true,                                              \
+   .lower_pack_unorm_2x16 = true,                                             \
+   .lower_pack_unorm_4x8 = true,                                              \
+   .lower_unpack_half_2x16 = true,                                            \
+   .lower_unpack_snorm_2x16 = true,                                           \
+   .lower_unpack_snorm_4x8 = true,                                            \
+   .lower_unpack_unorm_2x16 = true,                                           \
+   .lower_unpack_unorm_4x8 = true
+
+static const struct nir_shader_compiler_options scalar_nir_options_pre_gen8 = {
    COMMON_OPTIONS,
-   .lower_pack_half_2x16 = true,
-   .lower_pack_snorm_2x16 = true,
-   .lower_pack_snorm_4x8 = true,
-   .lower_pack_unorm_2x16 = true,
-   .lower_pack_unorm_4x8 = true,
-   .lower_unpack_half_2x16 = true,
-   .lower_unpack_snorm_2x16 = true,
-   .lower_unpack_snorm_4x8 = true,
-   .lower_unpack_unorm_2x16 = true,
-   .lower_unpack_unorm_4x8 = true,
+   COMMON_SCALAR_NIR_OPTIONS,
+   .native_float64 = false,
    .dvec3_consumes_two_locations = false,
 };
 
-static const struct nir_shader_compiler_options vulkan_scalar_nir_options = {
+static const struct nir_shader_compiler_options scalar_nir_options_gen8 = {
    COMMON_OPTIONS,
-   .lower_pack_half_2x16 = true,
-   .lower_pack_snorm_2x16 = true,
-   .lower_pack_snorm_4x8 = true,
-   .lower_pack_unorm_2x16 = true,
-   .lower_pack_unorm_4x8 = true,
-   .lower_unpack_half_2x16 = true,
-   .lower_unpack_snorm_2x16 = true,
-   .lower_unpack_snorm_4x8 = true,
-   .lower_unpack_unorm_2x16 = true,
-   .lower_unpack_unorm_4x8 = true,
+   COMMON_SCALAR_NIR_OPTIONS,
+   .native_float64 = true,
+   .dvec3_consumes_two_locations = false,
+};
+
+static const struct nir_shader_compiler_options vulkan_scalar_nir_options_gen8 = {
+   COMMON_OPTIONS,
+   COMMON_SCALAR_NIR_OPTIONS,
+   .native_float64 = true,
    .dvec3_consumes_two_locations = true,
 };
 
@@ -156,8 +159,10 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo, bool i
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
       if (is_scalar) {
-         compiler->glsl_compiler_options[i].NirOptions = is_vulkan ? &vulkan_scalar_nir_options
-                                                                   : &scalar_nir_options;
+         compiler->glsl_compiler_options[i].NirOptions =
+            (devinfo->gen >= 8) ? (is_vulkan ? &vulkan_scalar_nir_options_gen8
+                                             : &scalar_nir_options_gen8)
+                                : &scalar_nir_options_pre_gen8;
       } else {
          compiler->glsl_compiler_options[i].NirOptions =
             devinfo->gen < 6 ? &vector_nir_options : &vector_nir_options_gen6;
