@@ -1042,21 +1042,31 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       case GLSL_TYPE_INT:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_BOOL:
+      case GLSL_TYPE_DOUBLE: {
+         int bit_size = glsl_get_bit_size(val->const_type);
          if (glsl_type_is_matrix(val->const_type)) {
             unsigned rows = glsl_get_vector_elements(val->const_type);
             assert(glsl_get_matrix_columns(val->const_type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++)
-               for (unsigned j = 0; j < rows; j++)
-                  val->constant->value.u[rows * i + j] = elems[i]->value.u[j];
+               for (unsigned j = 0; j < rows; j++) {
+                  if (bit_size == 64)
+                     val->constant->value.d[rows * i + j] = elems[i]->value.d[j];
+                  else
+                     val->constant->value.u[rows * i + j] = elems[i]->value.u[j];
+               }
          } else {
             assert(glsl_type_is_vector(val->const_type));
             assert(glsl_get_vector_elements(val->const_type) == elem_count);
-            for (unsigned i = 0; i < elem_count; i++)
-               val->constant->value.u[i] = elems[i]->value.u[0];
+            for (unsigned i = 0; i < elem_count; i++) {
+               if (bit_size == 64)
+                   val->constant->value.d[i] = elems[i]->value.d[0];
+               else
+                  val->constant->value.u[i] = elems[i]->value.u[0];
+            }
          }
          ralloc_free(elems);
          break;
-
+      }
       case GLSL_TYPE_STRUCT:
       case GLSL_TYPE_ARRAY:
          ralloc_steal(val->constant, elems);
