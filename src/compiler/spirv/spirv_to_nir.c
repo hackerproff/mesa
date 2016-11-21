@@ -1089,18 +1089,35 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          unsigned len0 = glsl_get_vector_elements(v0->const_type);
          unsigned len1 = glsl_get_vector_elements(v1->const_type);
 
-         uint32_t u[8];
+         if (glsl_get_bit_size(v0->const_type) == 64)
+            len0 *= 2;
+         if (glsl_get_bit_size(v1->const_type) == 64)
+            len1 *= 2;
+
+         /* Allocate space for two dvec4s */
+         uint32_t u[16];
+         assert(len0 + len1 < 16);
          for (unsigned i = 0; i < len0; i++)
             u[i] = v0->constant->value.u[i];
          for (unsigned i = 0; i < len1; i++)
             u[len0 + i] = v1->constant->value.u[i];
 
-         for (unsigned i = 0; i < count - 6; i++) {
+         unsigned bit_size = glsl_get_bit_size(val->const_type);
+         for (unsigned i = 0, j = 0; i < count - 6; i++, j++) {
             uint32_t comp = w[i + 6];
+            /* In case of doubles, we need to pick two 32-bit values,
+             * then we duplicate the component to pick the right values.
+             */
+            if (bit_size == 64)
+               comp *= 2;
             if (comp == (uint32_t)-1) {
-               val->constant->value.u[i] = 0xdeadbeef;
+               val->constant->value.u[j] = 0xdeadbeef;
+               if (bit_size == 64)
+                  val->constant->value.u[++j] = 0xdeadbeef;
             } else {
-               val->constant->value.u[i] = u[comp];
+               val->constant->value.u[j] = u[comp];
+               if (bit_size == 64)
+                  val->constant->value.u[++j] = u[comp + 1];
             }
          }
          break;
