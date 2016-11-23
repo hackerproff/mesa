@@ -1431,7 +1431,8 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
 }
 
 static void
-set_max_gl_versions(struct intel_screen *screen)
+set_max_gl_versions(struct intel_screen *screen,
+                    bool can_do_pipelined_register_writes)
 {
    __DRIscreen *dri_screen = screen->driScrnPriv;
    const bool has_astc = screen->devinfo.gen >= 9;
@@ -1445,7 +1446,8 @@ set_max_gl_versions(struct intel_screen *screen)
       dri_screen->max_gl_es2_version = has_astc ? 32 : 31;
       break;
    case 7:
-      dri_screen->max_gl_core_version = 33;
+      dri_screen->max_gl_core_version =
+         screen->devinfo.is_haswell && can_do_pipelined_register_writes ? 40 : 33;
       dri_screen->max_gl_compat_version = 30;
       dri_screen->max_gl_es1_version = 11;
       dri_screen->max_gl_es2_version = screen->devinfo.is_haswell ? 31 : 30;
@@ -1650,7 +1652,60 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->winsys_msaa_samples_override = -1;
    }
 
-   set_max_gl_versions(screen);
+   bool can_do_pipelined_register_writes = false;
+
+   if (screen->devinfo.gen == 7) {
+      /* We need a way to check if gen7 HW is capable of creating an
+       * OpenGL 4.0 context.
+       *
+       * Checking the command parser version alone is not enough, because
+       * hardware security may still be enabled on HSW depending on the
+       * kernel version, which would prevent some GL4.0 extensions from
+       * working even if the relevant registers are already
+       * whitelisted in the software command checker.
+       *
+       * By checking can_do_pipelined_register_writes() output, we are
+       * sure if the gen7 HW is capable of OpenGL 4.0. However, we need
+       * to create a temporary context as we don't have any available at
+       * this point.
+       *
+       * More info:
+       * https://lists.freedesktop.org/archives/mesa-dev/2016-October/133439.html
+       * https://lists.freedesktop.org/archives/mesa-dev/2016-October/133431.html
+       */
+      struct brw_context *brw = rzalloc(NULL, struct brw_context);
+      if (!brw)
+         goto gen7_can_do_pipelined_register_writes_error;
+
+      /* Initialize brw_context with the minimum required to
+       * run brw_can_do_pipelined_register_writes().
+       */
+      brw->bufmgr = intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
+      brw->hw_ctx = drm_intel_gem_context_create(brw->bufmgr);
+      if (!brw->hw_ctx) {
+         dri_bufmgr_destroy(brw->bufmgr);
+         ralloc_free(brw);
+         goto gen7_can_do_pipelined_register_writes_error;
+      }
+      brw->gen = screen->devinfo.gen;
+      brw->screen = screen;
+      brw_init_pipe_control(brw, &screen->devinfo);
+      intel_fbo_init(brw);
+      intel_batchbuffer_init(brw);
+
+      can_do_pipelined_register_writes =
+         brw_can_do_pipelined_register_writes(brw);
+
+      /* Clean-up */
+      drm_intel_bo_unreference(brw->batch.last_bo);
+      intel_batchbuffer_free(brw);
+      brw_fini_pipe_control(brw);
+      drm_intel_gem_context_destroy(brw->hw_ctx);
+      dri_bufmgr_destroy(brw->bufmgr);
+      ralloc_free(brw);
+   }
+ gen7_can_do_pipelined_register_writes_error:
+   set_max_gl_versions(screen, can_do_pipelined_register_writes);
 
    /* Notification of GPU resets requires hardware contexts and a kernel new
     * enough to support DRM_IOCTL_I915_GET_RESET_STATS.  If the ioctl is

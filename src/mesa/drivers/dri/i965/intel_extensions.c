@@ -36,8 +36,8 @@
  * while others don't.  Instead of trying to enumerate every case, just
  * try and write a register and see if works.
  */
-static bool
-can_do_pipelined_register_writes(struct brw_context *brw)
+bool
+brw_can_do_pipelined_register_writes(struct brw_context *brw)
 {
    /**
     * gen >= 8 specifically allows these writes. gen <= 6 also
@@ -270,8 +270,14 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.OES_texture_half_float = true;
    ctx->Extensions.OES_texture_half_float_linear = true;
 
+   brw->predicate.supported = false;
+   brw->can_do_pipelined_register_writes =
+      brw_can_do_pipelined_register_writes(brw);
+
    if (brw->gen >= 8)
       ctx->Const.GLSLVersion = 450;
+   else if (brw->is_haswell && brw->can_do_pipelined_register_writes)
+      ctx->Const.GLSLVersion = 400;
    else if (brw->gen >= 6)
       ctx->Const.GLSLVersion = 330;
    else
@@ -335,10 +341,6 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
       }
    }
-
-   brw->predicate.supported = false;
-   brw->can_do_pipelined_register_writes =
-      can_do_pipelined_register_writes(brw);
 
    if (brw->gen >= 7) {
       ctx->Extensions.ARB_conservative_depth = true;
