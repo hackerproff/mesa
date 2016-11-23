@@ -167,7 +167,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    brw_process_intel_debug_variable();
 
-   device->compiler = brw_compiler_create(NULL, &device->info);
+   device->compiler = brw_compiler_create(NULL, &device->info, true);
    if (device->compiler == NULL) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;

@@ -96,7 +96,7 @@ mark_whole_variable(nir_shader *shader, nir_variable *var)
 
    const unsigned slots =
       var->data.compact ? DIV_ROUND_UP(glsl_get_length(type), 4)
-                        : glsl_count_attribute_slots(type, is_vertex_input);
+                        : glsl_count_attribute_slots(type, is_vertex_input && !shader->options->dvec3_consumes_two_locations);
 
    set_io_mask(shader, var, 0, slots);
 }
@@ -168,7 +168,7 @@ try_mask_partial_io(nir_shader *shader, nir_deref_var *deref)
        var->data.mode == nir_var_shader_in)
       is_vertex_input = true;
 
-   unsigned offset = get_io_offset(deref, is_vertex_input);
+   unsigned offset = get_io_offset(deref, is_vertex_input && !shader->options->dvec3_consumes_two_locations);
    if (offset == -1)
       return false;
 
@@ -184,7 +184,7 @@ try_mask_partial_io(nir_shader *shader, nir_deref_var *deref)
    }
 
    /* double element width for double types that takes two slots */
-   if (!is_vertex_input &&
+   if ((!is_vertex_input || shader->options->dvec3_consumes_two_locations) &&
        glsl_type_is_dual_slot(glsl_without_array(type))) {
       elem_width *= 2;
    }

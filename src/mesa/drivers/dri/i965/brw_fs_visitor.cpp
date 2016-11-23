@@ -35,10 +35,16 @@ using namespace brw;
 fs_reg *
 fs_visitor::emit_vs_system_value(int location)
 {
-   fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, 4 * (_mesa_bitcount_64(nir->info->inputs_read) +
-                        _mesa_bitcount_64(nir->info->double_inputs_read)),
-             BRW_REGISTER_TYPE_D);
+   fs_reg *reg;
+   if (nir->options->dvec3_consumes_two_locations)
+      reg = new(this->mem_ctx)
+         fs_reg(ATTR, 4 * _mesa_bitcount_64(nir->info->inputs_read),
+                BRW_REGISTER_TYPE_D);
+   else
+      reg = new(this->mem_ctx)
+         fs_reg(ATTR, 4 * (_mesa_bitcount_64(nir->info->inputs_read) +
+                           _mesa_bitcount_64(nir->info->double_inputs_read)),
+                BRW_REGISTER_TYPE_D);
    struct brw_vs_prog_data *vs_prog_data = brw_vs_prog_data(prog_data);
 
    switch (location) {

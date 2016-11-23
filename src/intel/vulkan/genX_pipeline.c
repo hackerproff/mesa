@@ -33,26 +33,33 @@
 static uint32_t
 vertex_element_comp_control(enum isl_format format, unsigned comp)
 {
-   uint8_t bits;
    switch (comp) {
-   case 0: bits = isl_format_layouts[format].channels.r.bits; break;
-   case 1: bits = isl_format_layouts[format].channels.g.bits; break;
-   case 2: bits = isl_format_layouts[format].channels.b.bits; break;
-   case 3: bits = isl_format_layouts[format].channels.a.bits; break;
-   default: unreachable("Invalid component");
-   }
-
-   if (bits) {
-      return VFCOMP_STORE_SRC;
-   } else if (comp < 3) {
-      return VFCOMP_STORE_0;
-   } else if (isl_format_layouts[format].channels.r.type == ISL_UINT ||
-            isl_format_layouts[format].channels.r.type == ISL_SINT) {
-      assert(comp == 3);
-      return VFCOMP_STORE_1_INT;
-   } else {
-      assert(comp == 3);
-      return VFCOMP_STORE_1_FP;
+   case 0:
+      return isl_format_layouts[format].channels.r.bits ?
+         VFCOMP_STORE_SRC : VFCOMP_STORE_0;
+   case 1:
+      return isl_format_layouts[format].channels.g.bits ?
+         VFCOMP_STORE_SRC : VFCOMP_STORE_0;
+   case 2:
+      return isl_format_layouts[format].channels.b.bits ?
+         VFCOMP_STORE_SRC : ((isl_format_layouts[format].channels.r.type == ISL_RAW) ?
+                             VFCOMP_NOSTORE : VFCOMP_STORE_0);
+   case 3:
+      if (isl_format_layouts[format].channels.a.bits)
+         return VFCOMP_STORE_SRC;
+      else
+         switch (isl_format_layouts[format].channels.r.type) {
+         case ISL_RAW:
+            return isl_format_layouts[format].channels.b.bits ?
+               VFCOMP_STORE_0 : VFCOMP_NOSTORE;
+         case ISL_UINT:
+         case ISL_SINT:
+            return VFCOMP_STORE_1_INT;
+         default:
+            return VFCOMP_STORE_1_FP;
+         }
+   default:
+      unreachable("Invalid component");
    }
 }
 
@@ -64,8 +71,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
    /* Pull inputs_read out of the VS prog data */
    const uint64_t inputs_read = vs_prog_data->inputs_read;
+   const uint64_t double_inputs_read = vs_prog_data->double_inputs_read;
    assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
    const uint32_t elements = inputs_read >> VERT_ATTRIB_GENERIC0;
+   const uint32_t elements_double = double_inputs_read >> VERT_ATTRIB_GENERIC0;
 
 #if GEN_GEN >= 8
    /* On BDW+, we only need to allocate space for base ids.  Setting up
@@ -83,13 +92,16 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                                 vs_prog_data->uses_baseinstance;
 #endif
 
-   uint32_t elem_count = __builtin_popcount(elements) + needs_svgs_elem;
-   if (elem_count == 0)
+   uint32_t elem_count =
+      __builtin_popcount(elements) - DIV_ROUND_UP(__builtin_popcount(elements_double), 2);
+
+   uint32_t total_elems = elem_count + needs_svgs_elem;
+   if (total_elems == 0)
       return;
 
    uint32_t *p;
 
-   const uint32_t num_dwords = 1 + elem_count * 2;
+   const uint32_t num_dwords = 1 + total_elems * 2;
    p = anv_batch_emitn(&pipeline->batch, num_dwords,
                        GENX(3DSTATE_VERTEX_ELEMENTS));
    memset(p + 1, 0, (num_dwords - 1) * 4);
@@ -107,7 +119,9 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       if ((elements & (1 << desc->location)) == 0)
          continue; /* Binding unused */
 
-      uint32_t slot = __builtin_popcount(elements & ((1 << desc->location) - 1));
+      uint32_t slot =
+         __builtin_popcount(elements & ((1 << desc->location) - 1)) -
+         DIV_ROUND_UP(__builtin_popcount(elements_double & ((1 << desc->location) - 1)), 2);
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = desc->binding,
@@ -137,7 +151,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 #endif
    }
 
-   const uint32_t id_slot = __builtin_popcount(elements);
+   const uint32_t id_slot = elem_count;
    if (needs_svgs_elem) {
       /* From the Broadwell PRM for the 3D_Vertex_Component_Control enum:
        *    "Within a VERTEX_ELEMENT_STATE structure, if a Component

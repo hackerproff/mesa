@@ -1688,7 +1688,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       ? screenExtensions : intelRobustScreenExtensions;
 
    screen->compiler = brw_compiler_create(screen,
-                                          &screen->devinfo);
+                                          &screen->devinfo,
+                                          false);
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
    screen->program_id = 1;

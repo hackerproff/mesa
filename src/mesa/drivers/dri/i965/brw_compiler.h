@@ -760,7 +760,7 @@ DEFINE_PROG_DATA_DOWNCAST(sf)
 /** @} */
 
 struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo);
+brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo, bool is_vulkan);
 
 /**
  * Compile a vertex shader.

@@ -1794,6 +1794,11 @@ typedef struct nir_shader_compiler_options {
     * information must be inferred from the list of input nir_variables.
     */
    bool use_interpolated_input_intrinsics;
+
+   /**
+    * In Vulkan, a dvec3/dvec4 consumes two locations instead just one.
+    */
+   bool dvec3_consumes_two_locations;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader {

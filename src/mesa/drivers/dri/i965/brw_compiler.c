@@ -55,6 +55,22 @@ static const struct nir_shader_compiler_options scalar_nir_options = {
    .lower_unpack_snorm_4x8 = true,
    .lower_unpack_unorm_2x16 = true,
    .lower_unpack_unorm_4x8 = true,
+   .dvec3_consumes_two_locations = false,
+};
+
+static const struct nir_shader_compiler_options vulkan_scalar_nir_options = {
+   COMMON_OPTIONS,
+   .lower_pack_half_2x16 = true,
+   .lower_pack_snorm_2x16 = true,
+   .lower_pack_snorm_4x8 = true,
+   .lower_pack_unorm_2x16 = true,
+   .lower_pack_unorm_4x8 = true,
+   .lower_unpack_half_2x16 = true,
+   .lower_unpack_snorm_2x16 = true,
+   .lower_unpack_snorm_4x8 = true,
+   .lower_unpack_unorm_2x16 = true,
+   .lower_unpack_unorm_4x8 = true,
+   .dvec3_consumes_two_locations = true,
 };
 
 static const struct nir_shader_compiler_options vector_nir_options = {
@@ -75,6 +91,7 @@ static const struct nir_shader_compiler_options vector_nir_options = {
    .lower_unpack_unorm_2x16 = true,
    .lower_extract_byte = true,
    .lower_extract_word = true,
+   .dvec3_consumes_two_locations = false,
 };
 
 static const struct nir_shader_compiler_options vector_nir_options_gen6 = {
@@ -92,10 +109,11 @@ static const struct nir_shader_compiler_options vector_nir_options_gen6 = {
    .lower_unpack_unorm_2x16 = true,
    .lower_extract_byte = true,
    .lower_extract_word = true,
+   .dvec3_consumes_two_locations = false,
 };
 
 struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
+brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo, bool is_vulkan)
 {
    struct brw_compiler *compiler = rzalloc(mem_ctx, struct brw_compiler);
 
@@ -138,7 +156,8 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
       if (is_scalar) {
-         compiler->glsl_compiler_options[i].NirOptions = &scalar_nir_options;
+         compiler->glsl_compiler_options[i].NirOptions = is_vulkan ? &vulkan_scalar_nir_options
+                                                                   : &scalar_nir_options;
       } else {
          compiler->glsl_compiler_options[i].NirOptions =
             devinfo->gen < 6 ? &vector_nir_options : &vector_nir_options_gen6;

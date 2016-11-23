@@ -2129,6 +2129,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 
    unsigned nr_attributes = _mesa_bitcount_64(prog_data->inputs_read);
 
+   if (shader->options->dvec3_consumes_two_locations)
+      nr_attributes -= DIV_ROUND_UP(_mesa_bitcount_64(prog_data->double_inputs_read), 2);
+
    /* gl_VertexID and gl_InstanceID are system values, but arrive via an
     * incoming vertex attribute.  So, add an extra slot.
     */
@@ -2146,9 +2149,13 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       nr_attributes++;
    }
 
-   unsigned nr_attribute_slots =
-      nr_attributes +
-      _mesa_bitcount_64(shader->info->double_inputs_read);
+   unsigned nr_attribute_slots = nr_attributes;
+   if (shader->options->dvec3_consumes_two_locations)
+      nr_attribute_slots +=
+         DIV_ROUND_UP(_mesa_bitcount_64(shader->info->double_inputs_read), 2);
+   else
+      nr_attribute_slots +=
+         _mesa_bitcount_64(shader->info->double_inputs_read);
 
    /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
     * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in

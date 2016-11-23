@@ -96,7 +96,7 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 }
 
 static bool
-remap_vs_attrs(nir_block *block, shader_info *nir_info)
+remap_vs_attrs(nir_block *block, nir_shader *nir)
 {
    nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -111,10 +111,13 @@ remap_vs_attrs(nir_block *block, shader_info *nir_info)
           * before it and counting the bits.
           */
          int attr = intrin->const_index[0];
-         int slot = _mesa_bitcount_64(nir_info->inputs_read &
+         int slot = _mesa_bitcount_64(nir->info->inputs_read &
                                       BITFIELD64_MASK(attr));
-         int dslot = _mesa_bitcount_64(nir_info->double_inputs_read &
-                                       BITFIELD64_MASK(attr));
+
+         int dslot = 0;
+         if (!nir->options->dvec3_consumes_two_locations)
+            dslot = _mesa_bitcount_64(nir->info->double_inputs_read &
+                                      BITFIELD64_MASK(attr));
          intrin->const_index[0] = 4 * (slot + dslot);
       }
    }
@@ -204,7 +207,10 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
     * loaded as one vec4 or dvec4 per element (or matrix column), depending on
     * whether it is a double-precision type or not.
     */
-   nir_lower_io(nir, nir_var_shader_in, type_size_vs_input, 0);
+   nir_lower_io(nir,
+                nir_var_shader_in,
+                nir->options->dvec3_consumes_two_locations ? type_size_vec4 : type_size_vs_input,
+                0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
@@ -220,7 +226,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
       nir_foreach_function(function, nir) {
          if (function->impl) {
             nir_foreach_block(block, function->impl) {
-               remap_vs_attrs(block, nir->info);
+               remap_vs_attrs(block, nir);
             }
          }
       }
