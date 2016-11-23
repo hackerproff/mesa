@@ -1645,6 +1645,10 @@ void
 gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
                 bool gs_present, bool tess_present);
 
+/* intel_extensions.c */
+bool
+brw_can_do_pipelined_register_writes(struct brw_context *brw);
+
 /* brw_reset.c */
 extern GLenum
 brw_get_graphics_reset_status(struct gl_context *ctx);
