@@ -299,31 +299,79 @@ build_atan(nir_builder *b, nir_ssa_def *y_over_x)
    return nir_fmul(b, tmp, nir_fsign(b, y_over_x));
 }
 
+/*
+ * Computes atan2(y,x)
+ *
+ * If any of the parameters is a denorm value, it is flushed to 0 at the very
+ * beginning to avoid precision errors
+ */
 static nir_ssa_def *
 build_atan2(nir_builder *b, nir_ssa_def *y, nir_ssa_def *x)
 {
    nir_ssa_def *zero = nir_imm_float(b, 0.0f);
+   nir_ssa_def *inf = nir_imm_float(b, INFINITY);
+   nir_ssa_def *minus_inf = nir_imm_float(b, -INFINITY);
+   nir_ssa_def *m_3_pi_4 = nir_fmul(b, nir_imm_float(b, 3.0f),
+                                       nir_imm_float(b, M_PI_4f));
 
-   /* If |x| >= 1.0e-8 * |y|: */
+   nir_ssa_def *denorm_y = nir_bcsel(b, nir_feq(b, nir_fmov(b, nir_fabs(b, y)),
+                                                   zero),
+                                        zero,
+                                        y);
+   nir_ssa_def *denorm_x = nir_bcsel(b, nir_feq(b, nir_fmov(b, nir_fabs(b, x)),
+                                                   zero),
+                                        zero,
+                                        x);
+
+   /* if y == +-INF */
+   nir_ssa_def *y_is_inf = nir_feq(b, nir_fabs(b, y), inf);
+
+   /* if x == +-INF */
+   nir_ssa_def *x_is_inf = nir_feq(b, nir_fabs(b, x), inf);
+
+   /* Case: y is +-INF */
+   nir_ssa_def *y_is_inf_then =
+      nir_fmul(b, nir_fsign(b, y),
+                  nir_bcsel(b, nir_feq(b, x, inf),
+                               nir_imm_float(b, M_PI_4f),
+                               nir_bcsel(b, nir_feq(b, x, minus_inf),
+                                            m_3_pi_4,
+                                            nir_imm_float(b, M_PI_2f))));
+
+   /* Case: x is +-INF */
+   nir_ssa_def *x_is_inf_then =
+      nir_fmul(b, nir_fsign(b, y),
+                  nir_bcsel(b, nir_feq(b, x, inf),
+                               zero,
+                               nir_imm_float(b, M_PIf)));
+
+   /* If x > 0 */
    nir_ssa_def *condition =
-      nir_fge(b, nir_fabs(b, x),
-              nir_fmul(b, nir_imm_float(b, 1.0e-8f), nir_fabs(b, y)));
+      nir_fne(b, denorm_x, zero);
 
    /* Then...call atan(y/x) and fix it up: */
-   nir_ssa_def *atan1 = build_atan(b, nir_fdiv(b, y, x));
+   nir_ssa_def *atan1 = build_atan(b, nir_fdiv(b, denorm_y, denorm_x));
+
    nir_ssa_def *r_then =
-      nir_bcsel(b, nir_flt(b, x, zero),
+      nir_bcsel(b, nir_flt(b, denorm_x, zero),
                    nir_fadd(b, atan1,
-                               nir_bcsel(b, nir_fge(b, y, zero),
+                               nir_bcsel(b, nir_fge(b, denorm_y, zero),
                                             nir_imm_float(b, M_PIf),
                                             nir_imm_float(b, -M_PIf))),
                    atan1);
 
    /* Else... */
    nir_ssa_def *r_else =
-      nir_fmul(b, nir_fsign(b, y), nir_imm_float(b, M_PI_2f));
+      nir_fmul(b, nir_fsign(b, denorm_y), nir_imm_float(b, M_PI_2f));
 
-   return nir_bcsel(b, condition, r_then, r_else);
+   /* Everything together */
+   return nir_bcsel(b, y_is_inf,
+                       y_is_inf_then,
+                       nir_bcsel(b, x_is_inf,
+                                    x_is_inf_then,
+                                    nir_bcsel(b, condition,
+                                                 r_then,
+                                                 r_else)));
 }
 
 static nir_ssa_def *
