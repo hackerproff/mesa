@@ -235,6 +235,21 @@ glsl_type_is_numeric(const struct glsl_type *type)
 }
 
 bool
+glsl_type_is_integer(const struct glsl_type *type)
+{
+   return (type->base_type == GLSL_TYPE_INT ||
+           type->base_type == GLSL_TYPE_UINT);
+}
+
+bool
+glsl_type_is_float(const struct glsl_type *type)
+{
+   return (type->base_type == GLSL_TYPE_FLOAT ||
+           type->base_type == GLSL_TYPE_DOUBLE);
+}
+
+
+bool
 glsl_type_is_boolean(const struct glsl_type *type)
 {
    return type->is_boolean();
