@@ -670,6 +670,25 @@ nir_alu_type_get_base_type(nir_alu_type type)
    return type & NIR_ALU_TYPE_BASE_TYPE_MASK;
 }
 
+static inline nir_alu_type
+nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
+{
+   unsigned bit_size = glsl_get_bit_size(type);
+   if (glsl_type_is_boolean(type))
+      return (nir_alu_type)(nir_type_bool | bit_size);
+
+   if (glsl_type_is_integer(type)) {
+      if (glsl_get_base_type(type) == GLSL_TYPE_UINT)
+         return (nir_alu_type)(nir_type_uint | bit_size);
+      else
+         return (nir_alu_type)(nir_type_int | bit_size);
+   }
+
+   if (glsl_type_is_float(type))
+      return (nir_alu_type)(nir_type_float | bit_size);
+   unreachable("unknown type");
+}
+
 typedef enum {
    NIR_OP_IS_COMMUTATIVE = (1 << 0),
    NIR_OP_IS_ASSOCIATIVE = (1 << 1),
