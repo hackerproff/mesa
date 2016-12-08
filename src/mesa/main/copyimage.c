@@ -580,6 +580,25 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
       return;
    }
 
+   if (srcTarget != GL_RENDERBUFFER) {
+      assert(srcTexImage);
+      if (!_mesa_is_texture_complete(srcTexImage->TexObject,
+                                     &srcTexImage->TexObject->Sampler)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glCopyImageSubData(incomplete src texture)");
+      }
+   }
+
+   if (dstTarget != GL_RENDERBUFFER) {
+      assert(dstTexImage);
+      if (!_mesa_is_texture_complete(dstTexImage->TexObject,
+                                     &dstTexImage->TexObject->Sampler)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glCopyImageSubData(incomplete dst texture)");
+         return;
+      }
+   }
+
    /* loop over 2D slices/faces/layers */
    for (i = 0; i < srcDepth; ++i) {
       int newSrcZ = srcZ + i;
