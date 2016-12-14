@@ -129,6 +129,15 @@ private:
 
 } /* end of anonymous namespace */
 
+static void
+nir_remap_attributes(nir_shader *shader)
+{
+   nir_foreach_variable(var, &shader->inputs) {
+      var->data.location += _mesa_bitcount_64(shader->info->double_locations &
+                                              BITFIELD64_MASK(var->data.location));
+   }
+}
+
 nir_shader *
 glsl_to_nir(const struct gl_shader_program *shader_prog,
             gl_shader_stage stage,
@@ -145,6 +154,9 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    visit_exec_list(sh->ir, &v1);
 
    nir_lower_constant_initializers(shader, (nir_variable_mode)~0);
+
+   if (shader->stage == MESA_SHADER_VERTEX)
+      nir_remap_attributes(shader);
 
    shader->info->name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
@@ -314,6 +326,14 @@ nir_visitor::visit(ir_variable *ir)
          var->data.mode = nir_var_system_value;
       } else {
          var->data.mode = nir_var_shader_in;
+      }
+
+      /* Mark all the locations that requires dual slot */
+      if (glsl_type_is_dual_slot(glsl_without_array(var->type))) {
+         for (uint i = 0; i < glsl_count_attribute_slots(var->type, true); i++) {
+            uint64_t bitfield = BITFIELD64_BIT(var->data.location + i);
+            shader->info->double_locations |= bitfield;
+         }
       }
       break;
 

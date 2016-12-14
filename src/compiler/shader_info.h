@@ -64,6 +64,8 @@ typedef struct shader_info {
    /* Which patch outputs are actually written */
    uint32_t patch_outputs_written;
 
+   uint64_t double_locations;
+
    /* Whether or not this shader ever uses textureGather() */
    bool uses_texture_gather;
 
