@@ -4939,7 +4939,7 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
        */
       return MIN3(devinfo->gen >= 8 ? 16 : ((devinfo->gen == 7 &&
                                              !devinfo->is_haswell &&
-                                             inst->exec_data_size() == 8) ? 4 : 8),
+                                             get_exec_type_size(inst) == 8) ? 4 : 8),
                   2 * REG_SIZE / (inst->dst.stride * type_sz(inst->dst.type)),
                   inst->exec_size);
 
