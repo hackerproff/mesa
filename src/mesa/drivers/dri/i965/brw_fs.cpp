@@ -5121,6 +5121,12 @@ fs_visitor::lower_simd_width()
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
       const unsigned lower_width = get_lowered_simd_width(devinfo, inst);
 
+      if (devinfo->gen == 7 && !devinfo->is_haswell &&
+          (get_exec_type_size(inst) == 8 || type_sz(inst->dst.type) == 8)) {
+         unsigned new_lower_width = MIN2(lower_width, dispatch_width / 2);
+         assert(new_lower_width  != lower_width);
+      }
+
       if (lower_width != inst->exec_size) {
          /* Builder matching the original instruction.  We may also need to
           * emit an instruction of width larger than the original, set the
