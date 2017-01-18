@@ -1108,6 +1108,11 @@ brw_MOV(struct brw_codegen *p, struct brw_reg dest, struct brw_reg src0)
       src0.hstride = BRW_HORIZONTAL_STRIDE_0;
    }
 
+   if (devinfo->gen == 7 && !devinfo->is_haswell &&
+       brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1 &&
+       type_sz(src0.type) == 8 && type_sz(dest.type) == 4)
+      dest.hstride = BRW_HORIZONTAL_STRIDE_1;
+
    return brw_alu1(p, BRW_OPCODE_MOV, dest, src0);
 }
 
