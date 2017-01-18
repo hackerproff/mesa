@@ -121,8 +121,7 @@ brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
             brw_reg.width++;
             if (brw_reg.vstride > 0)
                brw_reg.vstride++;
-            if (brw_reg.hstride > 1)
-               brw_reg.hstride++;
+            assert(brw_reg.hstride == BRW_HORIZONTAL_STRIDE_1);
          }
       }
 
@@ -1617,7 +1616,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_group(p, inst->group);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
-         src[i] = brw_reg_from_fs_reg(compiler->devinfo, inst,
+         src[i] = brw_reg_from_fs_reg(devinfo, inst,
                                       &inst->src[i], compressed);
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1629,7 +1628,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(compiler->devinfo, inst,
+      dst = brw_reg_from_fs_reg(devinfo, inst,
                                 &inst->dst, compressed);
 
       brw_set_default_access_mode(p, BRW_ALIGN_1);
