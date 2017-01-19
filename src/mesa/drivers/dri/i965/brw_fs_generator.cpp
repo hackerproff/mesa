@@ -451,10 +451,6 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
             retype(indirect_byte_offset, BRW_REGISTER_TYPE_UW);
       }
 
-      if (devinfo->gen == 7 && !devinfo->is_haswell &&
-          get_exec_type_size(inst) == 8 && type_sz(dst.type) == 4)
-         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
-
       /* There are a number of reasons why we don't use the base offset here.
        * One reason is that the field is only 9 bits which means we can only
        * use it to access the first 16 GRFs.  Also, from the Haswell PRM
