@@ -322,6 +322,7 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "pack_bytes";
    case VEC4_OPCODE_UNPACK_UNIFORM:
       return "unpack_uniform";
+   case FS_OPCODE_FROM_DOUBLE:
    case VEC4_OPCODE_FROM_DOUBLE:
       return "double_to_single";
    case VEC4_OPCODE_TO_DOUBLE:

@@ -62,7 +62,7 @@ fs_visitor::lower_d2x()
        */
       fs_reg temp = ibld.vgrf(inst->src[0].type, 1);
       fs_reg strided_temp = subscript(temp, inst->dst.type, 0);
-      ibld.MOV(strided_temp, inst->src[0]);
+      ibld.emit(FS_OPCODE_FROM_DOUBLE, strided_temp, inst->src[0]);
       ibld.MOV(dst, strided_temp);
 
       inst->remove(block);
