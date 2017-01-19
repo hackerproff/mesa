@@ -451,10 +451,6 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
             retype(indirect_byte_offset, BRW_REGISTER_TYPE_UW);
       }
 
-      if (devinfo->gen == 7 && !devinfo->is_haswell &&
-          get_exec_type_size(inst) == 8 && type_sz(dst.type) == 4)
-         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
-
       /* There are a number of reasons why we don't use the base offset here.
        * One reason is that the field is only 9 bits which means we can only
        * use it to access the first 16 GRFs.  Also, from the Haswell PRM
@@ -2128,6 +2124,20 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          if (devinfo->gen == 7 && !devinfo->is_haswell)
             dst.hstride = BRW_HORIZONTAL_STRIDE_1;
          brw_MOV(p, dst, src[0]);
+         break;
+
+      case FS_OPCODE_FROM_DOUBLE_INDIRECT:
+         assert(src[0].type == BRW_REGISTER_TYPE_DF);
+         assert(type_sz(dst.type) == 4);
+         assert(dst.hstride == BRW_HORIZONTAL_STRIDE_2);
+         /* When converting from DF->F, we set destination's stride as 2 as an
+          * alignment requirement. But in IVB/BYT, each DF implicitly writes 2 F,
+          * being the first one the converted value. So we don't need to
+          * explicitly set stride 2, but 1.
+          */
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
+            dst.hstride = BRW_HORIZONTAL_STRIDE_1;
+         generate_mov_indirect(inst, dst, src[0], src[1]);
          break;
 
       default:

@@ -445,6 +445,8 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "mulh";
    case SHADER_OPCODE_MOV_INDIRECT:
       return "mov_indirect";
+   case FS_OPCODE_FROM_DOUBLE_INDIRECT:
+      return "mov_d2x_indirect";
 
    case VEC4_OPCODE_URB_READ:
       return "urb_read";

@@ -3838,12 +3838,12 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                         offset(dest, bld, j), offset(src, bld, j),
                         indirect, brw_imm_ud(read_size));
             } else {
-               bld.emit(SHADER_OPCODE_MOV_INDIRECT,
+               bld.emit(FS_OPCODE_FROM_DOUBLE_INDIRECT,
                         subscript(offset(dest, bld, j), BRW_REGISTER_TYPE_UD, 0),
                         offset(src, bld, j),
                         indirect, brw_imm_ud(read_size));
 
-               bld.emit(SHADER_OPCODE_MOV_INDIRECT,
+               bld.emit(FS_OPCODE_FROM_DOUBLE_INDIRECT,
                         subscript(offset(dest, bld, j), BRW_REGISTER_TYPE_UD, 1),
                         offset(src, bld, j),
                         indirect_chv_high_32bit, brw_imm_ud(read_size));
