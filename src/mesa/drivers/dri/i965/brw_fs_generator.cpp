@@ -2116,7 +2116,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_DIM(p, dst, retype(src[0], BRW_REGISTER_TYPE_F));
          break;
 
-      case FS_OPCODE_FROM_DOUBLE:
+      case SHADER_OPCODE_FROM_DOUBLE:
          assert(src[0].type == BRW_REGISTER_TYPE_DF);
          assert(type_sz(dst.type) == 4);
          assert(dst.hstride == BRW_HORIZONTAL_STRIDE_2);

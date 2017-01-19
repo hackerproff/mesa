@@ -1189,7 +1189,7 @@ vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
 
    dst_reg temp2 = dst_reg(this, glsl_type::dvec4_type);
    temp2 = retype(temp2, single_type);
-   emit(VEC4_OPCODE_FROM_DOUBLE, temp2, src_reg(temp))
+   emit(SHADER_OPCODE_FROM_DOUBLE, temp2, src_reg(temp))
       ->size_written = 2 * REG_SIZE;
 
    vec4_instruction *inst = emit(MOV(dst, src_reg(temp2)));

@@ -1941,7 +1941,7 @@ generate_code(struct brw_codegen *p,
          break;
       }
 
-      case VEC4_OPCODE_FROM_DOUBLE: {
+      case SHADER_OPCODE_FROM_DOUBLE: {
          assert(type_sz(src[0].type) == 8);
          assert(type_sz(dst.type) == 4);
 

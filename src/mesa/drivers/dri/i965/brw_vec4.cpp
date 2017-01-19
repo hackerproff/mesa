@@ -259,7 +259,7 @@ vec4_instruction::can_do_writemask(const struct gen_device_info *devinfo)
 {
    switch (opcode) {
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
-   case VEC4_OPCODE_FROM_DOUBLE:
+   case SHADER_OPCODE_FROM_DOUBLE:
    case VEC4_OPCODE_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:
@@ -520,7 +520,7 @@ vec4_visitor::opt_reduce_swizzle()
          break;
 
       case VEC4_OPCODE_TO_DOUBLE:
-      case VEC4_OPCODE_FROM_DOUBLE:
+      case SHADER_OPCODE_FROM_DOUBLE:
       case VEC4_OPCODE_PICK_LOW_32BIT:
       case VEC4_OPCODE_PICK_HIGH_32BIT:
       case VEC4_OPCODE_SET_LOW_32BIT:
@@ -2231,12 +2231,12 @@ vec4_visitor::lower_simd_width()
          linst->group = channel_offset;
          linst->size_written = size_written;
 
-         /* When splitting VEC4_OPCODE_FROM_DOUBLE on Ivybridge, the second part
+         /* When splitting SHADER_OPCODE_FROM_DOUBLE on Ivybridge, the second part
           * should use in a temporal register. Later we will move the values
           * to the second half of the original destination, so we get all the
           * results in the same register. We use d2f_pass to detect this case.
           */
-         bool d2f_pass = (inst->opcode == VEC4_OPCODE_FROM_DOUBLE && n > 0);
+         bool d2f_pass = (inst->opcode == SHADER_OPCODE_FROM_DOUBLE && n > 0);
          /* Compute split dst region */
          dst_reg dst;
          if (needs_temp || d2f_pass || inst_df_dst_null) {
@@ -2273,7 +2273,7 @@ vec4_visitor::lower_simd_width()
          if (inst_df_dst_null) {
             unsigned num_regs = DIV_ROUND_UP(lowered_width, type_sz(BRW_REGISTER_TYPE_F));
             d2f_dst = retype(dst_reg(VGRF, alloc.allocate(num_regs)), BRW_REGISTER_TYPE_F);
-            vec4_instruction *d2f = new(mem_ctx) vec4_instruction(VEC4_OPCODE_FROM_DOUBLE, d2f_dst, src_reg(dst));
+            vec4_instruction *d2f = new(mem_ctx) vec4_instruction(SHADER_OPCODE_FROM_DOUBLE, d2f_dst, src_reg(dst));
             d2f->group = channel_offset;
             d2f->exec_size = lowered_width;
             d2f->size_written = lowered_width * type_sz(d2f_dst.type);
@@ -2328,7 +2328,7 @@ static bool
 is_align1_df(vec4_instruction *inst)
 {
    switch (inst->opcode) {
-   case VEC4_OPCODE_FROM_DOUBLE:
+   case SHADER_OPCODE_FROM_DOUBLE:
    case VEC4_OPCODE_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:
