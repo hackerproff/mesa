@@ -55,7 +55,7 @@ brw_file_from_reg(fs_reg *reg)
 
 static struct brw_reg
 brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
-                    fs_reg *reg, bool compressed)
+                    fs_reg *reg, bool is_dst, bool compressed)
 {
    struct brw_reg brw_reg;
 
@@ -123,6 +123,11 @@ brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
                brw_reg.vstride++;
             assert(brw_reg.hstride == BRW_HORIZONTAL_STRIDE_1);
          }
+
+         if (devinfo->gen == 7 && !devinfo->is_haswell &&
+             is_dst && type_sz(reg->type) < 8 &&
+             get_exec_type_size(inst) == 8)
+            brw_reg.hstride = BRW_HORIZONTAL_STRIDE_1;
       }
 
       brw_reg = retype(brw_reg, reg->type);
@@ -1626,7 +1631,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       for (unsigned int i = 0; i < inst->sources; i++) {
          src[i] = brw_reg_from_fs_reg(devinfo, inst,
-                                      &inst->src[i], compressed);
+                                      &inst->src[i], false, compressed);
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
 	  * value, there is a 33rd bit generated for the sign in the
@@ -1638,7 +1643,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		!inst->src[i].negate);
       }
       dst = brw_reg_from_fs_reg(devinfo, inst,
-                                &inst->dst, compressed);
+                                &inst->dst, true, compressed);
 
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_predicate_control(p, inst->predicate);
