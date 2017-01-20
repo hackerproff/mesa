@@ -1641,6 +1641,11 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       dst = brw_reg_from_fs_reg(devinfo, inst,
                                 &inst->dst, compressed);
 
+      if (devinfo->gen == 7 && !devinfo->is_haswell &&
+          get_exec_type_size(inst) == 8 &&
+          get_exec_type_size(inst) > type_sz(dst.type))
+         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
+
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
